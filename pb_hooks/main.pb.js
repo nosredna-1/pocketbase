@@ -1,43 +1,46 @@
 routerAdd(
     "POST",
-    "/billing/:name",
+    "/billing",
+    // "/billing/:name",
     (c) => {
       try {
-        let name = c.pathParam("name");
+        // let name = c.pathParam("name");
         const data = $apis.requestInfo(c).data;
         if (!data) {
           return c.json(400, { message: "No body available" });
         }
         if (!data.products || data.products.length < 1) {
           return c.json(400, {
-            message: `Can't create an empty bill for ${name}. 'products' shouldn't be empty or null.`,
+            // message: `Can't create an empty bill for ${name}. 'products' shouldn't be empty or null.`,
+            message: `Can't create an empty bill. 'products' shouldn't be empty or null.`,
           });
         }
   
-        const prodsCollection = $app.dao().findCollectionByNameOrId("prods");
-        const billCollection = $app.dao().findCollectionByNameOrId("Bill");
+        const prodsCollection = $app.dao().findCollectionByNameOrId("ProductInvoice");
+        const invoiceCollection = $app.dao().findCollectionByNameOrId("Invoice");
   
         $app.dao().runInTransaction((txDao) => {
           // Crear y guardar el registro de la factura
-          const billRecord = new Record(billCollection);
-          billRecord.load(data); // Asume que el cuerpo contiene todos los datos necesarios
-          txDao.saveRecord(billRecord);
+          const invoiceRecord = new Record(invoiceCollection);
+          invoiceRecord.load(data); // Asume que el cuerpo contiene todos los datos necesarios
+          txDao.saveRecord(invoiceRecord);
   
           // Crear y guardar los registros de productos asociados
           data.products.forEach((prod) => {
             const productRecord = new Record(prodsCollection);
             productRecord.load({
-              qty: prod.qty,
-              rels: prod.comps, //Arreglo de relaciones con cada complemento asociado al producto
-              associated_bill: billRecord.id,
+              base_product: prod.id,
+              associated_invoice: invoiceRecord.id,
+              complements: prod.comps, //Arreglo de relaciones con cada complemento asociado al producto
+              quantity: prod.qty,
             });
             txDao.saveRecord(productRecord);
           });
         });
   
         return c.json(200, {
-          message: `Bill for ${name} created successfully`,
-          billId: billRecord.id,
+          message: `Bill created successfully`,
+          billId: invoiceRecord.id,
         });
       } catch (error) {
         console.error("Error processing billing request:", error);
