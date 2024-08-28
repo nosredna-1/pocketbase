@@ -18,19 +18,22 @@ routerAdd(
   
         const prodsCollection = $app.dao().findCollectionByNameOrId("ProductInvoice");
         const invoiceCollection = $app.dao().findCollectionByNameOrId("Invoice");
+
+        let invoiceId = '';
   
         $app.dao().runInTransaction((txDao) => {
           // Crear y guardar el registro de la factura
           const invoiceRecord = new Record(invoiceCollection);
           invoiceRecord.load(data); // Asume que el cuerpo contiene todos los datos necesarios
           txDao.saveRecord(invoiceRecord);
+          invoiceId = invoiceRecord.id;
   
           // Crear y guardar los registros de productos asociados
           data.products.forEach((prod) => {
             const productRecord = new Record(prodsCollection);
             productRecord.load({
               base_product: prod.id,
-              associated_invoice: invoiceRecord.id,
+              associated_invoice: invoiceId,
               complements: prod.comps, //Arreglo de relaciones con cada complemento asociado al producto
               quantity: prod.qty,
             });
@@ -40,7 +43,7 @@ routerAdd(
   
         return c.json(200, {
           message: `Bill created successfully`,
-          billId: invoiceRecord.id,
+          billId: invoiceId,
         });
       } catch (error) {
         console.error("Error processing billing request:", error);
