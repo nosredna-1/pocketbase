@@ -7,15 +7,33 @@ routerAdd(
   "/billing",
   // "/billing/:name",
   (c) => {
+    function createInvoiceRecord(data, invoiceCollection) {
+      const invoiceRecord = new Record(invoiceCollection);
+      invoiceRecord.load(data); // Cargar datos en el registro
+      return invoiceRecord;
+    }
+
+    function createProductRecords(products, invoiceId, prodsCollection) {
+      return products.map((prod) => {
+        const productRecord = new Record(prodsCollection);
+        productRecord.load({
+          base_product: prod.product,
+          associated_invoice: invoiceId,
+          complements: prod.complements,
+          quantity: prod.quantity,
+          composed_value: prod.composed_value,
+        });
+        return productRecord;
+      });
+    }
+
     try {
-      // let name = c.pathParam("name");
       const data = $apis.requestInfo(c).data;
       if (!data) {
         return c.json(400, { message: "No body available" });
       }
       if (!data.products || data.products.length < 1) {
         return c.json(400, {
-          // message: `Can't create an empty bill for ${name}. 'products' shouldn't be empty or null.`,
           message: `Can't create an empty bill. 'products' shouldn't be empty or null.`,
         });
       }
@@ -29,20 +47,17 @@ routerAdd(
 
       $app.dao().runInTransaction((txDao) => {
         // Crear y guardar el registro de la factura
-        const invoiceRecord = new Record(invoiceCollection);
-        invoiceRecord.load(data); // Asume que el cuerpo contiene todos los datos necesarios
+        const invoiceRecord = createInvoiceRecord(data, invoiceCollection);
         txDao.saveRecord(invoiceRecord);
         invoiceId = invoiceRecord.id;
 
         // Crear y guardar los registros de productos asociados
-        data.products.forEach((prod) => {
-          const productRecord = new Record(prodsCollection);
-          productRecord.load({
-            base_product: prod.id,
-            associated_invoice: invoiceId,
-            complements: prod.comps, //Arreglo de relaciones con cada complemento asociado al producto
-            quantity: prod.qty,
-          });
+        const productRecords = createProductRecords(
+          data.products,
+          invoiceId,
+          prodsCollection
+        );
+        productRecords.forEach((productRecord) => {
           txDao.saveRecord(productRecord);
         });
       });
@@ -81,7 +96,6 @@ routerAdd("POST", "billing/delivery", (c) => {
   const invoiceCollection = $app.dao().findCollectionByNameOrId("Invoice");
   const deliveryCollection = $app.dao().findCollectionByNameOrId("Delivery");
   let invoiceId = "";
-
 
   $app.dao().runInTransaction((txDao) => {
     // Crear y guardar el registro de la factura
