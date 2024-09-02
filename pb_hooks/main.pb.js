@@ -4,7 +4,7 @@ routerAdd("GET", "/users", (c) => {
 
 routerAdd(
   "POST",
-  "/billing",
+  "/billing/:type",
   // "/billing/:name",
   (c) => {
     function createInvoiceRecord(data, invoiceCollection) {
@@ -13,9 +13,9 @@ routerAdd(
       return invoiceRecord;
     }
 
-    function createProductRecords(products, invoiceId, prodsCollection) {
+    function createProductRecords(products, invoiceId, prodInvoiceCollection) {
       return products.map((prod) => {
-        const productRecord = new Record(prodsCollection);
+        const productRecord = new Record(prodInvoiceCollection);
         productRecord.load({
           base_product: prod.product,
           associated_invoice: invoiceId,
@@ -27,39 +27,110 @@ routerAdd(
       });
     }
 
+    const $ = $app.dao().findCollectionByNameOrId;
+
+    const collections = {
+      INVOICE: "Invoice",
+      PINVOICE: "ProductInvoice",
+      DELIVERY: "Delivery",
+      CHECK: "Check",
+    };
+    const allowedTypes = {
+      INVOICE: "Invoice",
+      DELIVERY: "Delivery",
+      CHECK: "Check",
+    };
+
+    const ROLES = {
+      CASHIER: "Cashier",
+      KIOSK: "Kiosk",
+    };
+
+    const STATUS = {
+      OPEN: "Open",
+      CLOSED: "Closed",
+      PENDING: "Pending",
+    };
+
     try {
+      const type = c.pathParam("type");
       const data = $apis.requestInfo(c).data;
-      if (!data) {
-        return c.json(400, { message: "No body available" });
-      }
+      const authRecord = c.get("authRecord");
+
+      if (!data) return c.json(400, { message: "No body available" });
       if (!data.products || data.products.length < 1) {
         return c.json(400, {
           message: `Can't create an empty bill. 'products' shouldn't be empty or null.`,
         });
       }
 
-      const prodsCollection = $app
-        .dao()
-        .findCollectionByNameOrId("ProductInvoice");
-      const invoiceCollection = $app.dao().findCollectionByNameOrId("Invoice");
+      // if (!type || !Object.values(allowedTypes).includes(type))
+      //   return c.json(422, { message: "Type unknown" });
+
+      const prodInvoiceCollection = $(collections.PINVOICE);
+      const invoiceCollection = $(collections.INVOICE);
+      const deliveryCollection = $(collections.DELIVERY);
+      // const checkCollection = $(collections.CHECK);
 
       let invoiceId = "";
 
       $app.dao().runInTransaction((txDao) => {
-        // Crear y guardar el registro de la factura
-        const invoiceRecord = createInvoiceRecord(data, invoiceCollection);
+        console.log("handling auth record", JSON.stringify(authRecord));
+        console.log(
+          "handling roles",
+          JSON.stringify(authRecord?.roles ?? "No roles in auth record")
+        );
+        const status = authRecord.roles?.includes(ROLES.CASHIER)
+          ? STATUS.CLOSED
+          : STATUS.OPEN;
+        // Crear y guardar el registro de la factura - todo registro va asociado a una factura
+        const invoiceRecord = createInvoiceRecord(
+          { ...data, status },
+          invoiceCollection
+        );
         txDao.saveRecord(invoiceRecord);
         invoiceId = invoiceRecord.id;
 
-        // Crear y guardar los registros de productos asociados
-        const productRecords = createProductRecords(
-          data.products,
-          invoiceId,
-          prodsCollection
-        );
-        productRecords.forEach((productRecord) => {
-          txDao.saveRecord(productRecord);
-        });
+        // Crear y guardar los registros de productos asociados para una factura o registro cerrado
+        if (status === STATUS.CLOSED) {
+          const productRecords = createProductRecords(
+            data.products,
+            invoiceId,
+            prodInvoiceCollection
+          );
+          productRecords.forEach((productRecord) => {
+            txDao.saveRecord(productRecord);
+          });
+        }
+
+        let child_record = null;
+        switch (type) {
+          case allowedTypes.CHECK:
+            console.log("handling a check");
+            break;
+          case allowedTypes.DELIVERY:
+            console.log("handling a delivery");
+            // const deliveryRecord = Record(deliveryCollection);
+            child_record = Record(deliveryCollection);
+            child_record.load({
+              associated_invoice: invoiceId,
+              products: data.products,
+              ...data.delivery,
+              // charge: 1000,
+              // address: "data_address",
+              // neighborhood: "data_neighborhood",
+              // lat: 0,
+              // lng: 0,
+              // customer_name: "customer",
+              // customer_phone: "phone",
+            });
+            break;
+          case allowedTypes.INVOICE:
+            console.log("handling a delivery");
+            break;
+        }
+        // child_record.load(data);
+        if (child_record !== null) txDao.saveRecord(child_record);
       });
 
       return c.json(200, {
@@ -77,7 +148,7 @@ routerAdd(
   $apis.requireAdminOrRecordAuth()
 );
 
-routerAdd("POST", "billing/delivery", (c) => {
+routerAdd("POST", "billing2/delivery", (c) => {
   const data = $apis.requestInfo(c).data;
 
   // let type = c.pathParam("type");
@@ -124,7 +195,7 @@ routerAdd("POST", "billing/delivery", (c) => {
 
     // Crear y guardar los registros de productos asociados
     // data.products.forEach((prod) => {
-    //   const productRecord = new Record(prodsCollection);
+    //   const productRecord = new Record(prodInvoiceCollection);
     //   productRecord.load({
     //     base_product: prod.id,
     //     associated_invoice: invoiceId,
