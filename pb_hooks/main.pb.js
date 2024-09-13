@@ -54,8 +54,10 @@ routerAdd(
 
     try {
       const type = c.pathParam("type");
-      const data = $apis.requestInfo(c).data;
-      const authRecord = c.get("authRecord");
+      const req = $apis.requestInfo(c);
+      const data = req.data;
+      // const authRecord = c.get("authRecord");
+      const authRecord = req.authRecord;
 
       if (!data) return c.json(400, { message: "No body available" });
       if (!data.products || data.products.length < 1) {
@@ -63,9 +65,6 @@ routerAdd(
           message: `Can't create an empty bill. 'products' shouldn't be empty or null.`,
         });
       }
-
-      // if (!type || !Object.values(allowedTypes).includes(type))
-      //   return c.json(422, { message: "Type unknown" });
 
       const prodInvoiceCollection = $(collections.PINVOICE);
       const invoiceCollection = $(collections.INVOICE);
@@ -75,14 +74,12 @@ routerAdd(
       let invoiceId = "";
 
       $app.dao().runInTransaction((txDao) => {
-        console.log("handling auth record", JSON.stringify(authRecord));
-        console.log(
-          "handling roles",
-          JSON.stringify(authRecord?.roles ?? "No roles in auth record")
-        );
-        const status = authRecord.roles?.includes(ROLES.CASHIER)
-          ? STATUS.CLOSED
-          : STATUS.OPEN;
+
+        // const status = !authRecord.roles?.includes(ROLES.CASHIER)
+        const roles = authRecord.get("roles");
+        const status = roles?.includes(ROLES.KIOSK)
+          ? STATUS.OPEN
+          : STATUS.CLOSED;
         // Crear y guardar el registro de la factura - todo registro va asociado a una factura
         const invoiceRecord = createInvoiceRecord(
           { ...data, status },
@@ -106,27 +103,17 @@ routerAdd(
         let child_record = null;
         switch (type) {
           case allowedTypes.CHECK:
-            console.log("handling a check");
             break;
           case allowedTypes.DELIVERY:
             console.log("handling a delivery");
-            // const deliveryRecord = Record(deliveryCollection);
             child_record = Record(deliveryCollection);
             child_record.load({
               associated_invoice: invoiceId,
               products: data.products,
               ...data.delivery,
-              // charge: 1000,
-              // address: "data_address",
-              // neighborhood: "data_neighborhood",
-              // lat: 0,
-              // lng: 0,
-              // customer_name: "customer",
-              // customer_phone: "phone",
             });
             break;
           case allowedTypes.INVOICE:
-            console.log("handling a delivery");
             break;
         }
         // child_record.load(data);
@@ -138,7 +125,7 @@ routerAdd(
         billId: invoiceId,
       });
     } catch (error) {
-      console.error("Error processing billing request:", error);
+      // console.error("Error processing billing request:", error);
       return c.json(500, {
         message: "Internal Server Error",
         error: error.message,
