@@ -74,12 +74,11 @@ routerAdd(
       let invoiceId = "";
 
       $app.dao().runInTransaction((txDao) => {
-
         // const status = !authRecord.roles?.includes(ROLES.CASHIER)
         const roles = authRecord.get("roles");
-        const status = roles?.includes(ROLES.KIOSK)
-          ? STATUS.OPEN
-          : STATUS.CLOSED;
+        const status = roles?.includes(ROLES.CASHIER)
+          ? STATUS.CLOSED
+          : STATUS.OPEN;
         // Crear y guardar el registro de la factura - todo registro va asociado a una factura
         const invoiceRecord = createInvoiceRecord(
           { ...data, status },
@@ -105,7 +104,6 @@ routerAdd(
           case allowedTypes.CHECK:
             break;
           case allowedTypes.DELIVERY:
-            console.log("handling a delivery");
             child_record = Record(deliveryCollection);
             child_record.load({
               associated_invoice: invoiceId,
@@ -149,8 +147,6 @@ routerAdd("POST", "billing2/delivery", (c) => {
     });
   }
   const record = c.get("authRecord");
-  console.log("auth:", JSON.stringify(record));
-  console.log("data:", JSON.stringify(data));
   const invoiceCollection = $app.dao().findCollectionByNameOrId("Invoice");
   const deliveryCollection = $app.dao().findCollectionByNameOrId("Delivery");
   let invoiceId = "";
