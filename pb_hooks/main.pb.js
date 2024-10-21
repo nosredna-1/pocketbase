@@ -107,8 +107,8 @@ routerAdd(
             child_record = Record(deliveryCollection);
             child_record.load({
               associated_invoice: invoiceId,
-              products: data.products,
               ...data.delivery,
+              products: data.products,
             });
             break;
           case allowedTypes.INVOICE:
