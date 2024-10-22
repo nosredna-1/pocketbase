@@ -21,10 +21,10 @@ routerAdd(
       return products.map((prod) => {
         const productRecord = new Record(prodInvoiceCollection);
         productRecord.load({
-          base_product: prod.product,       // ID of the base product
-          associated_invoice: invoiceId,    // Reference to the invoice ID
-          complements: prod.complements,    // Any complements associated with the product
-          quantity: prod.quantity,          // Quantity of the product
+          base_product: prod.product, // ID of the base product
+          associated_invoice: invoiceId, // Reference to the invoice ID
+          complements: prod.complements, // Any complements associated with the product
+          quantity: prod.quantity, // Quantity of the product
           composed_value: prod.composed_value, // Total value considering complements
         });
         return productRecord;
@@ -76,7 +76,8 @@ routerAdd(
       // Validate that 'products' exists and is not empty
       if (!data.products || data.products.length < 1) {
         return c.json(400, {
-          message: "Can't create an empty bill. 'products' shouldn't be empty or null.",
+          message:
+            "Can't create an empty bill. 'products' shouldn't be empty or null.",
         });
       }
 
@@ -93,7 +94,9 @@ routerAdd(
         const roles = authRecord.get("roles");
 
         // Determine the invoice status based on user roles
-        const status = roles?.includes(ROLES.CASHIER) ? STATUS.CLOSED : STATUS.OPEN;
+        const status = roles?.includes(ROLES.CASHIER)
+          ? STATUS.CLOSED
+          : STATUS.OPEN;
 
         // Create and save the invoice record
         const invoiceRecord = createInvoiceRecord(
@@ -104,7 +107,7 @@ routerAdd(
         invoiceId = invoiceRecord.id;
 
         // If the invoice is closed, create and save product records associated with the invoice
-        if (status === STATUS.CLOSED) {
+        if (status === STATUS.CLOSED || type === allowedTypes.INVOICE) {
           const productRecords = createProductRecords(
             data.products,
             invoiceId,
@@ -127,7 +130,7 @@ routerAdd(
             child_record = new Record(deliveryCollection);
             child_record.load({
               associated_invoice: invoiceId,
-              ...data.delivery,    // Spread delivery-specific data
+              ...data.delivery, // Spread delivery-specific data
               products: data.products,
             });
             break;
@@ -173,7 +176,8 @@ routerAdd("POST", "billing2/delivery", (c) => {
   // Validate that 'products' exists and is not empty
   if (!data.products || data.products.length < 1) {
     return c.json(400, {
-      message: "Can't create an empty delivery. 'products' shouldn't be empty or null.",
+      message:
+        "Can't create an empty delivery. 'products' shouldn't be empty or null.",
     });
   }
 
