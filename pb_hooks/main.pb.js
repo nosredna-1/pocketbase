@@ -53,6 +53,7 @@ routerAdd(
     const ROLES = {
       CASHIER: "Cashier",
       KIOSK: "Kiosk",
+      REGISTER: "Register",
     };
 
     // Define invoice statuses
@@ -94,7 +95,7 @@ routerAdd(
         const roles = authRecord.get("roles");
 
         // Determine the invoice status based on user roles
-        const status = roles?.includes(ROLES.CASHIER)
+        const status = roles?.includes(ROLES.REGISTER)
           ? STATUS.CLOSED
           : STATUS.OPEN;
 
