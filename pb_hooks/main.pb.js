@@ -88,17 +88,16 @@ routerAdd(
       const deliveryCollection = $(collections.DELIVERY);
 
       let invoiceId = ""; // Variable to store the created invoice ID
+      // Get the user's roles
+      const roles = authRecord.get("roles");
+
+      // Determine the invoice status based on user roles
+      const status = roles?.includes(ROLES.REGISTER)
+        ? STATUS.CLOSED
+        : STATUS.OPEN;
 
       // Run database operations within a transaction
       $app.dao().runInTransaction((txDao) => {
-        // Get the user's roles
-        const roles = authRecord.get("roles");
-
-        // Determine the invoice status based on user roles
-        const status = roles?.includes(ROLES.REGISTER)
-          ? STATUS.CLOSED
-          : STATUS.OPEN;
-
         // Create and save the invoice record
         const invoiceRecord = createInvoiceRecord(
           { ...data, status },
@@ -132,6 +131,7 @@ routerAdd(
             child_record.load({
               associated_invoice: invoiceId,
               ...data.delivery, // Spread delivery-specific data
+              status,
               products: data.products,
             });
             break;
@@ -145,14 +145,19 @@ routerAdd(
 
         // Save the child record if it was created
         if (child_record !== null) {
+          if (status === STATUS.OPEN) invoiceId = child_record.id;
           txDao.saveRecord(child_record);
         }
       });
 
       // Return a success response with the invoice ID
       return c.json(200, {
-        message: "Bill created successfully",
-        billId: invoiceId,
+        message:
+          status === STATUS.CLOSED
+            ? "Bill created successfully"
+            : "Delivery created successfully",
+        type: status === STATUS.CLOSED ? "Invoice" : "Delivery",
+        id: invoiceId,
       });
     } catch (error) {
       // Return an error response with the error message
@@ -162,75 +167,8 @@ routerAdd(
       });
     }
   },
-  $apis.requireAdminOrRecordAuth() // Middleware to require admin or record authentication
+  $apis.requireAdminOrRecordAuth()
 );
-
-// Define a POST endpoint for "billing2/delivery"
-routerAdd("POST", "billing2/delivery", (c) => {
-  const data = $apis.requestInfo(c).data; // Get the request body data
-
-  // Validate that the request body exists
-  if (!data) {
-    return c.json(400, { message: "No body available" });
-  }
-
-  // Validate that 'products' exists and is not empty
-  if (!data.products || data.products.length < 1) {
-    return c.json(400, {
-      message:
-        "Can't create an empty delivery. 'products' shouldn't be empty or null.",
-    });
-  }
-
-  const record = c.get("authRecord"); // Get the authenticated user's record
-  const invoiceCollection = $app.dao().findCollectionByNameOrId("Invoice"); // Get the Invoice collection
-  const deliveryCollection = $app.dao().findCollectionByNameOrId("Delivery"); // Get the Delivery collection
-  let invoiceId = ""; // Variable to store the created invoice ID
-
-  // Run database operations within a transaction
-  $app.dao().runInTransaction((txDao) => {
-    // Create and save the invoice record
-    const invoiceRecord = new Record(invoiceCollection);
-    invoiceRecord.load({
-      ...data,
-      status: record.roles?.includes("Register") ? "Closed" : "Open",
-    }); // Set the status based on user roles
-    txDao.saveRecord(invoiceRecord);
-    invoiceId = invoiceRecord.id;
-
-    // Create and save the delivery record associated with the invoice
-    const deliveryRecord = new Record(deliveryCollection);
-    deliveryRecord.load({
-      associated_invoice: invoiceId,
-      products: data.products,
-      charge: 1000, // Assuming a fixed charge
-      address: data.address || "data_address",
-      neighborhood: data.neighborhood || "data_neighborhood",
-      lat: data.lat || 0,
-      lng: data.lng || 0,
-      customer_name: data.customer_name || "customer",
-      customer_phone: data.customer_phone || "phone",
-    });
-    txDao.saveRecord(deliveryRecord);
-
-    // Code to create and save product records can be added here if needed
-    // For example:
-    // const prodInvoiceCollection = $app.dao().findCollectionByNameOrId("ProductInvoice");
-    // data.products.forEach((prod) => {
-    //   const productRecord = new Record(prodInvoiceCollection);
-    //   productRecord.load({
-    //     base_product: prod.id,
-    //     associated_invoice: invoiceId,
-    //     complements: prod.complements, // Array of complements associated with the product
-    //     quantity: prod.quantity,
-    //   });
-    //   txDao.saveRecord(productRecord);
-    // });
-  });
-
-  // Return a success response
-  return c.json(200, { message: "Billing a delivery" });
-});
 
 // Define a GET endpoint for "/status"
 routerAdd("GET", "/status", (c) => {
@@ -238,3 +176,73 @@ routerAdd("GET", "/status", (c) => {
   // Return a JSON response with "Ok" and the message if provided
   return c.json(200, { message: "Ok" + (search ? ": " + search : "") });
 });
+
+routerAdd(
+  "POST",
+  "/deliveries",
+  (c) => {
+    const req = $apis.requestInfo(c); // Get request information
+    const data = req.data; // Get the request body data
+    const authRecord = req.authRecord; // Get the authenticated user's record
+    const roles = authRecord.get("roles");
+    if (!roles.includes("Register")) {
+      return c.json(403, { message: "No tiene permisos para hacer esto" });
+    }
+    if (!data) {
+      return c.json(400, { message: "No body available" });
+    }
+    if (!data.deliveries || data.deliveries.length < 1) {
+      return c.json(400, {
+        message:
+          "Can't process an empty list. 'deliveries' shouldn't be empty or null.",
+      });
+    }
+
+    // Function to create product records associated with the invoice
+    function createProductRecords(products, invoiceId, prodInvoiceCollection) {
+      return products.map((prod) => {
+        const productRecord = new Record(prodInvoiceCollection);
+        productRecord.load({
+          base_product: prod.product, // ID of the base product
+          associated_invoice: invoiceId, // Reference to the invoice ID
+          complements: prod.complements, // Any complements associated with the product
+          quantity: prod.quantity, // Quantity of the product
+          composed_value: prod.composed_value, // Total value considering complements
+        });
+        return productRecord;
+      });
+    }
+
+    const collections = {
+      INVOICE: "Invoice",
+      PINVOICE: "ProductInvoice",
+      DELIVERY: "Delivery",
+      CHECK: "Check",
+    };
+    $app.dao().runInTransaction((txDao) => {
+      data.deliveries.forEach((delivery) => {
+        const deliveryRecord = $app
+          .dao()
+          .findRecordById(collections.DELIVERY, delivery.id);
+        if (!deliveryRecord) {
+          return c.json(404, {
+            message: `Delivery with ID ${delivery.id} not found`,
+          });
+        }
+        const productRecords = createProductRecords(
+          delivery.products,
+          deliveryRecord.get("associated_invoice"),
+          $app.dao().findCollectionByNameOrId(collections.PINVOICE)
+        );
+        productRecords.forEach((productRecord) => {
+          txDao.saveRecord(productRecord);
+        });
+        deliveryRecord.set("status", "Closed");
+        txDao.saveRecord(deliveryRecord);
+      });
+    });
+
+    return c.json(200, { message: "Ok" });
+  },
+  $apis.requireAdminOrRecordAuth()
+);
