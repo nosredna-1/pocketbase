@@ -191,6 +191,9 @@ routerAdd(
     if (!data) {
       return c.json(400, { message: "No body available" });
     }
+    if (!data.courier) {
+      return c.json(400, { message: "Courier is required" });
+    }
     if (!data.deliveries || data.deliveries.length < 1) {
       return c.json(400, {
         message:
@@ -238,6 +241,7 @@ routerAdd(
           txDao.saveRecord(productRecord);
         });
         deliveryRecord.set("status", "Closed");
+        deliveryRecord.set("courier", data.courier);
         txDao.saveRecord(deliveryRecord);
       });
     });
