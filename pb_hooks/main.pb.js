@@ -1,9 +1,53 @@
-// Define a GET endpoint for "/users"
-routerAdd("GET", "/users", (c) => {
-  // Return a JSON response with the roles from the query parameters
-  return c.json(200, { message: "ok:" + $apis.requestInfo(c).query.roles });
-});
+// $app.rootCmd.addCommand(
+//   new Command({
+//     use: "test",
+//     run: (cmd, args) => {
+//       const utils = require(`${__hooks}/utils.js`);
+//       const date = new Date();
+//       date.setDate(date.getDate() - 1);
+//       date.setHours(1, 0, 0); // Set the time to 6:00 AM GMT-5
+//       const filterDate = date.toISOString().split("T").join(" ");
 
+//       console.log(filterDate);
+
+//       const records = $app.dao().findRecordsByFilter(
+//         utils.COLLECTIONS.DELIVERY, // collection
+//         `status ~ "${utils.STATUS.OPEN}" && created >= "${filterDate}"` // where
+//         // "created" // sort
+//       );
+//       // $app
+//       //   .dao()
+//       //   .recordQuery(utils.COLLECTIONS.DELIVERY)
+//       //   .andWhere($dbx.hashExp({ status: utils.STATUS.OPEN }))
+//       //   .orderBy("created DESC")
+//       //   .limit(1)
+//       //   .one(record);
+//       const save = $app.dao().saveRecord;
+//       records.forEach((record) => {
+//         record.set("status", utils.STATUS.PENDING);
+//         save(record);
+//         console.log(record.get("created"));
+//       });
+//       console.log(JSON.stringify(records.length));
+//     },
+//   })
+// );
+
+// cronAdd("automark-deliveries", "0 6 * * *", () => {
+//   const utils = require(`${__hooks}/utils.js`);
+
+//   const records = $app.dao().findRecordsByFilter(
+//     utils.COLLECTIONS.DELIVERY, // collection
+//     `status ~ "${utils.STATUS.OPEN}"` // where
+//   );
+
+//   console.log("Retrieved records:");
+//   console.log(JSON.stringify(records));
+// });
+
+routerAdd("GET", "health", (c) => {
+  return c.json(200, { message: "OK, service working" });
+});
 // Define a POST endpoint for "/billing/:type"
 routerAdd(
   "POST",
@@ -15,53 +59,21 @@ routerAdd(
       invoiceRecord.load(data); // Load data into the record
       return invoiceRecord;
     }
-
-    // Function to create product records associated with the invoice
-    function createProductRecords(products, invoiceId, prodInvoiceCollection) {
-      return products.map((prod) => {
-        const productRecord = new Record(prodInvoiceCollection);
-        productRecord.load({
-          base_product: prod.product, // ID of the base product
-          associated_invoice: invoiceId, // Reference to the invoice ID
-          complements: prod.complements, // Any complements associated with the product
-          quantity: prod.quantity, // Quantity of the product
-          composed_value: prod.composed_value, // Total value considering complements
-        });
-        return productRecord;
-      });
-    }
+    const utils = require(`${__hooks}/utils.js`);
+    const createProductRecords = utils.createProductRecords;
 
     // Shortcut function to find collections by name or ID
     const $ = $app.dao().findCollectionByNameOrId;
-
     // Define collection names
-    const collections = {
-      INVOICE: "Invoice",
-      PINVOICE: "ProductInvoice",
-      DELIVERY: "Delivery",
-      CHECK: "Check",
-    };
+    const collections = utils.COLLECTIONS;
 
     // Allowed types for the billing endpoint
-    const allowedTypes = {
-      INVOICE: "Invoice",
-      DELIVERY: "Delivery",
-      CHECK: "Check",
-    };
+    const allowedTypes = utils.ALLOWED_TYPES;
 
     // Define user roles
-    const ROLES = {
-      CASHIER: "Cashier",
-      KIOSK: "Kiosk",
-      REGISTER: "Register",
-    };
-
+    const ROLES = utils.ROLES;
     // Define invoice statuses
-    const STATUS = {
-      OPEN: "Open",
-      CLOSED: "Closed",
-      PENDING: "Pending",
-    };
+    const STATUS = utils.STATUS;
 
     try {
       const type = c.pathParam("type"); // Get the 'type' parameter from the path
@@ -122,9 +134,6 @@ routerAdd(
 
         // Handle additional actions based on the 'type' parameter
         switch (type) {
-          case allowedTypes.CHECK:
-            // Logic for 'Check' type can be implemented here
-            break;
           case allowedTypes.DELIVERY:
             // Create a delivery record associated with the invoice
             child_record = new Record(deliveryCollection);
@@ -137,6 +146,9 @@ routerAdd(
             break;
           case allowedTypes.INVOICE:
             // No additional action needed for 'Invoice' type
+            break;
+          case allowedTypes.CHECK:
+            // Logic for 'Check' type can be implemented here
             break;
           default:
             // If the 'type' is not recognized, throw an error
@@ -170,13 +182,6 @@ routerAdd(
   $apis.requireAdminOrRecordAuth()
 );
 
-// Define a GET endpoint for "/status"
-routerAdd("GET", "/status", (c) => {
-  const search = c.queryParam("message"); // Get the 'message' query parameter
-  // Return a JSON response with "Ok" and the message if provided
-  return c.json(200, { message: "Ok" + (search ? ": " + search : "") });
-});
-
 routerAdd(
   "POST",
   "/deliveries",
@@ -201,27 +206,11 @@ routerAdd(
       });
     }
 
-    // Function to create product records associated with the invoice
-    function createProductRecords(products, invoiceId, prodInvoiceCollection) {
-      return products.map((prod) => {
-        const productRecord = new Record(prodInvoiceCollection);
-        productRecord.load({
-          base_product: prod.product, // ID of the base product
-          associated_invoice: invoiceId, // Reference to the invoice ID
-          complements: prod.complements, // Any complements associated with the product
-          quantity: prod.quantity, // Quantity of the product
-          composed_value: prod.composed_value, // Total value considering complements
-        });
-        return productRecord;
-      });
-    }
+    const utils = require(`${__hooks}/utils.js`);
+    const createProductRecords = utils.createProductRecords;
 
-    const collections = {
-      INVOICE: "Invoice",
-      PINVOICE: "ProductInvoice",
-      DELIVERY: "Delivery",
-      CHECK: "Check",
-    };
+    const collections = utils.COLLECTIONS;
+
     $app.dao().runInTransaction((txDao) => {
       data.deliveries.forEach((delivery) => {
         const deliveryRecord = $app
