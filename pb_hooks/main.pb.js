@@ -3,7 +3,9 @@
 //     use: "test",
 //     run: (cmd, args) => {
 //       const utils = require(`${__hooks}/utils.js`);
-//       const date = new Date();
+//       // const date = new Date();
+//       const date = new Date("2024/11/17");
+
 //       date.setDate(date.getDate() - 1);
 //       date.setHours(1, 0, 0); // Set the time to 6:00 AM GMT-5
 //       const filterDate = date.toISOString().split("T").join(" ");
@@ -12,19 +14,12 @@
 
 //       const records = $app.dao().findRecordsByFilter(
 //         utils.COLLECTIONS.DELIVERY, // collection
-//         `status ~ "${utils.STATUS.OPEN}" && created >= "${filterDate}"` // where
+//         `status ~ "${utils.STATUS.PENDING}" && created >= "${filterDate}"` // where
 //         // "created" // sort
 //       );
-//       // $app
-//       //   .dao()
-//       //   .recordQuery(utils.COLLECTIONS.DELIVERY)
-//       //   .andWhere($dbx.hashExp({ status: utils.STATUS.OPEN }))
-//       //   .orderBy("created DESC")
-//       //   .limit(1)
-//       //   .one(record);
 //       const save = $app.dao().saveRecord;
 //       records.forEach((record) => {
-//         record.set("status", utils.STATUS.PENDING);
+//         record.set("status", utils.STATUS.OPEN);
 //         save(record);
 //         console.log(record.get("created"));
 //       });
@@ -33,21 +28,32 @@
 //   })
 // );
 
-// cronAdd("automark-deliveries", "0 6 * * *", () => {
-//   const utils = require(`${__hooks}/utils.js`);
+cronAdd("automark-deliveries", "0 6 * * *", () => {
+  const utils = require(`${__hooks}/utils.js`);
+  const date = new Date();
 
-//   const records = $app.dao().findRecordsByFilter(
-//     utils.COLLECTIONS.DELIVERY, // collection
-//     `status ~ "${utils.STATUS.OPEN}"` // where
-//   );
+  date.setDate(date.getDate() - 1);
+  date.setHours(1, 0, 0); // Set the time to 6:00 AM GMT-5
+  const filterDate = date.toISOString().split("T").join(" ");
 
-//   console.log("Retrieved records:");
-//   console.log(JSON.stringify(records));
-// });
+  console.log("running cronjob, mark-deliveries", filterDate);
+
+  const records = $app.dao().findRecordsByFilter(
+    utils.COLLECTIONS.DELIVERY, // collection
+    `status ~ "${utils.STATUS.OPEN}" && created >= "${filterDate}"` // where
+    // "created" // sort
+  );
+  const save = $app.dao().saveRecord;
+  records.forEach((record) => {
+    record.set("status", utils.STATUS.PENDING);
+    save(record);
+  });
+});
 
 routerAdd("GET", "health", (c) => {
   return c.json(200, { message: "OK, service working" });
 });
+
 // Define a POST endpoint for "/billing/:type"
 routerAdd(
   "POST",
