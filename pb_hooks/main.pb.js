@@ -28,7 +28,7 @@
 //   })
 // );
 
-cronAdd("automark-deliveries", "0 6 * * *", () => {
+cronAdd("automark-deliveries", "0 10 * * *", () => {
   const utils = require(`${__hooks}/utils.js`);
   const date = new Date();
 
@@ -104,6 +104,7 @@ routerAdd(
       const prodInvoiceCollection = $(collections.PINVOICE);
       const invoiceCollection = $(collections.INVOICE);
       const deliveryCollection = $(collections.DELIVERY);
+      const checkCollection = $(collections.CHECK); 
 
       let invoiceId = ""; // Variable to store the created invoice ID
       // Get the user's roles
@@ -154,6 +155,13 @@ routerAdd(
             // No additional action needed for 'Invoice' type
             break;
           case allowedTypes.CHECK:
+            child_record = new Record();
+            child_record.load({
+              associated_invoice: invoiceId,
+              ...data.delivery, // Spread delivery-specific data
+              status,
+              products: data.products,
+            });
             // Logic for 'Check' type can be implemented here
             break;
           default:
