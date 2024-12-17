@@ -151,12 +151,16 @@ routerAdd(
               status,
               products: data.products,
             });
-            console.log(JSON.stringify(data.delivery));
+            console.log(
+              JSON.stringify(data.delivery),
+              "collection",
+              collections.BCUSTOMERS
+            );
             const userRecord = $app
               .dao()
               .findRecordById(
-                collections.BCUSTOMERS,
-                (data.delivery.customer_phone ?? 0).toString()
+                "Basic_Customer",
+                ('3125671610').toString()
               );
             console.log(JSON.stringify(userRecord), "is it something?");
             console.log(
