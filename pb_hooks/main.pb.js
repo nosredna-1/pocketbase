@@ -156,8 +156,13 @@ routerAdd(
               .dao()
               .findRecordById(
                 collections.BCUSTOMERS,
-                data.delivery.customer_phone ?? 0
+                (data.delivery.customer_phone ?? 0).toString()
               );
+            console.log(JSON.stringify(userRecord), "is it something?");
+            console.log(
+              "Seeking customer by phone number",
+              data.delivery.customer_phone
+            );
             if (!userRecord) {
               console.log("non existent user", data.delivery.customer_phone);
 
@@ -171,7 +176,9 @@ routerAdd(
                 neigborhood: data.delivery.neighborhood,
                 charge: data.delivery.charge,
               });
+              console.log("record created, ready to save");
               txDao.saveRecord(customerRecord);
+              console.log("record saved");
             } else {
               console.log(JSON.stringify(userRecord));
             }
