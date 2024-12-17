@@ -156,12 +156,13 @@ routerAdd(
               "collection",
               collections.BCUSTOMERS
             );
-            const userRecord = $app
-              .dao()
-              .findRecordById(
-                "Basic_Customer",
-                ('3125671610').toString()
-              );
+            let userRecord = null;
+            try {
+              userRecord = $app.dao().findRecordById("Basic_Customer", "3125671610");
+            } catch (err) {
+              console.log("Error al buscar el registro de usuario:", err.message);
+              // Maneja el error adecuadamente o devuelve una respuesta apropiada.
+            }
             console.log(JSON.stringify(userRecord), "is it something?");
             console.log(
               "Seeking customer by phone number",
