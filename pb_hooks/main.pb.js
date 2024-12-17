@@ -158,19 +158,14 @@ routerAdd(
             );
             let userRecord = null;
             try {
-              userRecord = $app.dao().findRecordById("Basic_Customer", "3125671610");
+              userRecord = $app
+                .dao()
+                .findRecordById(
+                  collections.BCUSTOMERS,
+                  data.delivery.customer_phone
+                );
+              userRecord.set('requested', userRecord.get('requested') + 1);
             } catch (err) {
-              console.log("Error al buscar el registro de usuario:", err.message);
-              // Maneja el error adecuadamente o devuelve una respuesta apropiada.
-            }
-            console.log(JSON.stringify(userRecord), "is it something?");
-            console.log(
-              "Seeking customer by phone number",
-              data.delivery.customer_phone
-            );
-            if (!userRecord) {
-              console.log("non existent user", data.delivery.customer_phone);
-
               const customerRecord = new Record(bcustomerCollection);
               customerRecord.load({
                 id: data.delivery.customer_phone, // ID of the customer, by the moment should be the phone_number
@@ -181,11 +176,8 @@ routerAdd(
                 neigborhood: data.delivery.neighborhood,
                 charge: data.delivery.charge,
               });
-              console.log("record created, ready to save");
               txDao.saveRecord(customerRecord);
               console.log("record saved");
-            } else {
-              console.log(JSON.stringify(userRecord));
             }
 
             break;
