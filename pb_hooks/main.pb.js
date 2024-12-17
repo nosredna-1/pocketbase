@@ -151,11 +151,15 @@ routerAdd(
               status,
               products: data.products,
             });
+            console.log(JSON.stringify(data.delivery));
             const userRecord = $app
               .dao()
-              .findRecordById(collections.BCUSTOMERS, data.delivery.customer_phone);
+              .findRecordById(
+                collections.BCUSTOMERS,
+                data.delivery.customer_phone ?? 0
+              );
             if (!userRecord) {
-              console.log('non existent user', d);
+              console.log("non existent user", data.delivery.customer_phone);
 
               const customerRecord = new Record(bcustomerCollection);
               customerRecord.load({
@@ -168,10 +172,10 @@ routerAdd(
                 charge: data.delivery.charge,
               });
               txDao.saveRecord(customerRecord);
-            } else{
+            } else {
               console.log(JSON.stringify(userRecord));
             }
-            
+
             break;
           case allowedTypes.INVOICE:
             // No additional action needed for 'Invoice' type
