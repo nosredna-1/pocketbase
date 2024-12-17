@@ -153,22 +153,25 @@ routerAdd(
             });
             const userRecord = $app
               .dao()
-              .findRecordById(collections.BCUSTOMERS, authRecord.id);
+              .findRecordById(collections.BCUSTOMERS, data.delivery.customer_phone);
             if (!userRecord) {
+              console.log('non existent user', d);
+
+              const customerRecord = new Record(bcustomerCollection);
+              customerRecord.load({
+                id: data.delivery.customer_phone, // ID of the customer, by the moment should be the phone_number
+                address: data.delivery.address,
+                phone: data.delivery.customer_phone,
+                lat: data.delivery.lat,
+                lng: data.delivery.lng,
+                neigborhood: data.delivery.neighborhood,
+                charge: data.delivery.charge,
+              });
+              txDao.saveRecord(customerRecord);
+            } else{
               console.log(JSON.stringify(userRecord));
-              // const customerRecord = new Record(bcustomerCollection);
-              // customerRecord.load({
-              //   address: data.delivery.address,
-              //   phone: data.delivery.customer_phone,
-              //   lat: data.delivery.lat,
-              //   lng: data.delivery.lng,
-              //   neigborhood: data.delivery.neighborhood,
-              //   charge: data.delivery.charge,
-              // });
-            } else {
-              console.log("existing record for customer");
             }
-            // txDao.saveRecord(customerRecord);
+            
             break;
           case allowedTypes.INVOICE:
             // No additional action needed for 'Invoice' type
