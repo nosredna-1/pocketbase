@@ -173,7 +173,7 @@ routerAdd(
                 phone: data.delivery.customer_phone,
                 lat: data.delivery.lat,
                 lng: data.delivery.lng,
-                neigborhood: data.delivery.neighborhood,
+                neighborhood: data.delivery.neighborhood,
                 charge: data.delivery.charge,
               });
               txDao.saveRecord(customerRecord);
