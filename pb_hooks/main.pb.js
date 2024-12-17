@@ -104,7 +104,8 @@ routerAdd(
       const prodInvoiceCollection = $(collections.PINVOICE);
       const invoiceCollection = $(collections.INVOICE);
       const deliveryCollection = $(collections.DELIVERY);
-      const checkCollection = $(collections.CHECK); 
+      const bcustomerCollection = $(collections.BCUSTOMERS);
+      const checkCollection = $(collections.CHECK);
 
       let invoiceId = ""; // Variable to store the created invoice ID
       // Get the user's roles
@@ -150,6 +151,21 @@ routerAdd(
               status,
               products: data.products,
             });
+            const userRecord = $app
+              .dao()
+              .findRecordById(collections.BCUSTOMERS, authRecord.id);
+            if (!userRecord) {
+              const customerRecord = new Record(bcustomerCollection);
+              customerRecord.load({
+                address: data.delivery.address,
+                phone: data.delivery.customer_phone,
+                lat: data.delivery.lat,
+                lng: data.delivery.lng,
+                neigborhood: data.delivery.neighborhood,
+                charge: data.delivery.charge,
+              });
+            }
+            txDao.saveRecord(customerRecord);
             break;
           case allowedTypes.INVOICE:
             // No additional action needed for 'Invoice' type

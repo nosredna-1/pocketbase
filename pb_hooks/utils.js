@@ -3,6 +3,7 @@ const COLLECTIONS = {
   PINVOICE: "ProductInvoice",
   DELIVERY: "Delivery",
   CHECK: "Check",
+  BCUSTOMERS: "Basic_Customer",
 };
 
 const ALLOWED_TYPES = {
