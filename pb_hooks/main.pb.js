@@ -155,17 +155,20 @@ routerAdd(
               .dao()
               .findRecordById(collections.BCUSTOMERS, authRecord.id);
             if (!userRecord) {
-              const customerRecord = new Record(bcustomerCollection);
-              customerRecord.load({
-                address: data.delivery.address,
-                phone: data.delivery.customer_phone,
-                lat: data.delivery.lat,
-                lng: data.delivery.lng,
-                neigborhood: data.delivery.neighborhood,
-                charge: data.delivery.charge,
-              });
+              console.log(JSON.stringify(userRecord));
+              // const customerRecord = new Record(bcustomerCollection);
+              // customerRecord.load({
+              //   address: data.delivery.address,
+              //   phone: data.delivery.customer_phone,
+              //   lat: data.delivery.lat,
+              //   lng: data.delivery.lng,
+              //   neigborhood: data.delivery.neighborhood,
+              //   charge: data.delivery.charge,
+              // });
+            } else {
+              console.log("existing record for customer");
             }
-            txDao.saveRecord(customerRecord);
+            // txDao.saveRecord(customerRecord);
             break;
           case allowedTypes.INVOICE:
             // No additional action needed for 'Invoice' type
