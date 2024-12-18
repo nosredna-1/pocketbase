@@ -28,7 +28,7 @@
 //   })
 // );
 
-cronAdd("automark-deliveries", "0 6 * * *", () => {
+cronAdd("automark-deliveries", "0 10 * * *", () => {
   const utils = require(`${__hooks}/utils.js`);
   const date = new Date();
 
@@ -36,7 +36,7 @@ cronAdd("automark-deliveries", "0 6 * * *", () => {
   date.setHours(1, 0, 0); // Set the time to 6:00 AM GMT-5
   const filterDate = date.toISOString().split("T").join(" ");
 
-  console.log("running cronjob, mark-deliveries", filterDate);
+  console.log("running cronjob, mark-deliveries since:", filterDate);
 
   const records = $app.dao().findRecordsByFilter(
     utils.COLLECTIONS.DELIVERY, // collection
@@ -104,6 +104,8 @@ routerAdd(
       const prodInvoiceCollection = $(collections.PINVOICE);
       const invoiceCollection = $(collections.INVOICE);
       const deliveryCollection = $(collections.DELIVERY);
+      const bcustomerCollection = $(collections.BCUSTOMERS);
+      const checkCollection = $(collections.CHECK);
 
       let invoiceId = ""; // Variable to store the created invoice ID
       // Get the user's roles
@@ -149,11 +151,42 @@ routerAdd(
               status,
               products: data.products,
             });
+
+            let userRecord = null;
+            try {
+              userRecord = $app
+                .dao()
+                .findRecordById(
+                  collections.BCUSTOMERS,
+                  data.delivery.customer_phone
+                );
+              // userRecord.set('requested', userRecord.get('requested') + 1);
+            } catch (err) {
+              const customerRecord = new Record(bcustomerCollection);
+              customerRecord.load({
+                id: data.delivery.customer_phone, // ID of the customer, by the moment should be the phone_number
+                address: data.delivery.address,
+                phone: data.delivery.customer_phone,
+                lat: data.delivery.lat,
+                lng: data.delivery.lng,
+                neighborhood: data.delivery.neighborhood,
+                charge: data.delivery.charge,
+              });
+              txDao.saveRecord(customerRecord);
+            }
+
             break;
           case allowedTypes.INVOICE:
             // No additional action needed for 'Invoice' type
             break;
           case allowedTypes.CHECK:
+            child_record = new Record();
+            child_record.load({
+              associated_invoice: invoiceId,
+              ...data.delivery, // Spread delivery-specific data
+              status,
+              products: data.products,
+            });
             // Logic for 'Check' type can be implemented here
             break;
           default:
