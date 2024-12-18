@@ -29,7 +29,6 @@ const STATUS = {
 function createProductRecords(products, invoiceId, prodInvoiceCollection) {
   return products.map((prod) => {
     const productRecord = new Record(prodInvoiceCollection);
-    console.log(productRecord);
     productRecord.load({
       base_product: prod.product, // ID of the base product
       associated_invoice: invoiceId, // Reference to the invoice ID

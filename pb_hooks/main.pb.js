@@ -36,7 +36,7 @@ cronAdd("automark-deliveries", "0 10 * * *", () => {
   date.setHours(1, 0, 0); // Set the time to 6:00 AM GMT-5
   const filterDate = date.toISOString().split("T").join(" ");
 
-  console.log("running cronjob, mark-deliveries", filterDate);
+  console.log("running cronjob, mark-deliveries since:", filterDate);
 
   const records = $app.dao().findRecordsByFilter(
     utils.COLLECTIONS.DELIVERY, // collection
@@ -151,11 +151,7 @@ routerAdd(
               status,
               products: data.products,
             });
-            console.log(
-              JSON.stringify(data.delivery),
-              "collection",
-              collections.BCUSTOMERS
-            );
+
             let userRecord = null;
             try {
               userRecord = $app
@@ -164,7 +160,7 @@ routerAdd(
                   collections.BCUSTOMERS,
                   data.delivery.customer_phone
                 );
-              userRecord.set('requested', userRecord.get('requested') + 1);
+              // userRecord.set('requested', userRecord.get('requested') + 1);
             } catch (err) {
               const customerRecord = new Record(bcustomerCollection);
               customerRecord.load({
@@ -177,7 +173,6 @@ routerAdd(
                 charge: data.delivery.charge,
               });
               txDao.saveRecord(customerRecord);
-              console.log("record saved");
             }
 
             break;
